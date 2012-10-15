@@ -1,0 +1,37 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true"
+        android:text="@string/intro_text"
+        tools:context=".Intro" />
+
+    <Button
+        android:id="@+id/button_current"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Near your current location" />
+
+    <Button
+        android:id="@+id/button_alt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Near an alternate location (enter below)" />
+
+    <EditText
+        android:id="@+id/editTextLocation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:inputType="textPostalAddress" >
+
+        <requestFocus />
+    </EditText>
+
+</LinearLayout>
