@@ -50,6 +50,7 @@ public class Intro extends Activity {
                 //GlobalVariables.LocationAlt = "";
 				
 				LocalSelectedLocationCurrent = true;
+				GlobalVariables.SelectedLocationCurrent = LocalSelectedLocationCurrent;
                 
 				// Run /src/com.jasonhsu.libraryfinder/ShowMap.java
 			    Intent Intent1 = new Intent(context, ShowMap.class);

@@ -9,5 +9,13 @@
 			<attribute name="javadoc_location" value="file:/home/jhsu/jhsu-android/android-sdk-linux/add-ons/addon-google_apis-google-16/docs/reference"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="/home/jhsu/jhsu-android/android-sdk-linux/platforms/android-16/android.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="file:/home/jhsu/jhsu-android/android-sdk-linux/docs/reference"/>
+		</attributes>
+		<accessrules>
+			<accessrule kind="nonaccessible" pattern="com/android/internal/**"/>
+		</accessrules>
+	</classpathentry>
 	<classpathentry kind="output" path="bin/classes"/>
 </classpath>
