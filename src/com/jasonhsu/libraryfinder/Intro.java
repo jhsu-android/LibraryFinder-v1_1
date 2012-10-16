@@ -63,7 +63,6 @@ public class Intro extends Activity {
 	public void addButtonAlt() { 
 		
 		Button ButtonAlt;
-		final Context context = this;
 		// button = ButtonAlt (Continue button) from res/layout/intro.xml
 		ButtonAlt = (Button) findViewById(R.id.button_alt);
 		
