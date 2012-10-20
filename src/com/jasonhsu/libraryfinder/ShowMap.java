@@ -26,10 +26,12 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.google.android.maps.GeoPoint;
+import com.google.android.maps.ItemizedOverlay;
 import com.google.android.maps.MapActivity;
 import com.google.android.maps.MapController;
 import com.google.android.maps.MapView;
 import com.google.android.maps.Overlay;
+import com.google.android.maps.OverlayItem;
 
 public class ShowMap extends MapActivity {
 	
@@ -226,32 +228,74 @@ public class ShowMap extends MapActivity {
 		MapController1.setCenter (GeoPoint1);
 		MapView1.setBuiltInZoomControls(true); // Add zoom control
         MapController1.setZoom(15); // Set zoom level
+        
+
+		
+		//Log.i ("DrawMap", String.valueOf(list_length));
+
 	}
 		
 	
 	
 	private void DrawMarkersPlaces () { 
-		List<Overlay> mapOverlays = MapView1.getOverlays();
-		Drawable Drawable1 = this.getResources().getDrawable(R.drawable.marker);
-		//HelloItemizedOverlay itemizedoverlay = new HelloItemizedOverlay(drawable, this);
-		//PlacesToPlot.clear();
-		//for (int i=1; i < ResultList.size(); i++) {
-			//HashMap<String, String> HashMap1 = new HashMap<String, String>();
-			//HashMap1 = ResultList.get(i);
-			//String PlaceName = HashMap1.get(KEY_NAME);
-			//String PlaceAddress = HashMap1.get(KEY_ADDRESS);
+		Drawable MarkerPlaces = getResources().getDrawable(R.drawable.marker);
+		MarkerPlaces.setBounds( (int) (-MarkerPlaces.getIntrinsicWidth()/2),
+				(int) (-MarkerPlaces.getIntrinsicHeight()/2),
+				(int) (MarkerPlaces.getIntrinsicWidth()/2),
+				(int) (MarkerPlaces.getIntrinsicHeight()/2)
+				);
+		PlacesFound PlacesFound1 = new PlacesFound (MarkerPlaces);
+		MapView1.getOverlays().add(PlacesFound1);
+	}
+	
+	
+	// Based on the example on pages 608-610 in the book _Pro Android 4_
+	class PlacesFound extends ItemizedOverlay {
+		
+		
+		private ArrayList<OverlayItem> places =
+				new ArrayList<OverlayItem>();
+
+		public PlacesFound (Drawable marker_local) {
+			super(marker_local);
+			// TODO Auto-generated constructor stub
 			
-			//String PlaceLatStr = HashMap1.get(KEY_LAT);
-			//String PlaceLongStr = HashMap1.get(KEY_LNG);
-			//double PlaceLatDouble = Double.valueOf(PlaceLatStr);
-			//double PlaceLongDouble = Double.valueOf(PlaceLongStr);
-			//int PlaceLatInt = (int)(PlaceLatDouble*1000000);
-			//int PlaceLongInt = (int)(PlaceLongDouble*1000000);
-			//GeoPoint PlaceGeoPoint = new GeoPoint (PlaceLatInt, PlaceLongInt);
+	        try {
+	        	HashMap<String, String> HashMap1 = new HashMap<String, String>();
+	    		int list_length = ResultList.size();
+	    		for (int i = 0; i < list_length; i++) {
+	    			HashMap1 = ResultList.get(i);
+	    			String Name = HashMap1.get(KEY_NAME);
+	    			String Address = HashMap1.get(KEY_ADDRESS);
+	    			String LatStr = HashMap1.get(KEY_LAT);
+	    			String LngStr = HashMap1.get(KEY_LNG);
+	    			double LatDouble = Double.valueOf(LatStr);
+	    			double LngDouble = Double.valueOf(LngStr);
+	    			int LatInt = (int)(LatDouble*1000000);
+	    			int LngInt = (int)(LngDouble*1000000);
+	    			GeoPoint GeoPointPlace = new GeoPoint (LatInt, LngInt);
+	    			places.add(new OverlayItem (GeoPointPlace, Name, Name));
+	    			populate();
+	    			//Log.i ("DrawMap", Element1);
+	    		}
+	        }
+	        catch (Exception e) {
+	        	Log.e ("MarkersPlaces", "ERROR: Could not extract places data");
+	        }
 			
-			//PlacesToPlot.add(new OverlayItem (PlaceGeoPoint, PlaceName, PlaceAddress));
-		//}
-		//MapView1.getOverlays().add(PlacesToPlot);
+		}
+
+		@Override
+		protected OverlayItem createItem(int arg0) {
+			// TODO Auto-generated method stub
+			return places.get(arg0);
+		}
+
+		@Override
+		public int size() {
+			// TODO Auto-generated method stub
+			return places.size();
+		}
 		
 	}
 	
