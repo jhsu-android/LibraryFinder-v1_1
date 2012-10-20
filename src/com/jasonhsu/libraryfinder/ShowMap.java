@@ -5,12 +5,14 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -24,11 +26,10 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.google.android.maps.GeoPoint;
-import com.google.android.maps.ItemizedOverlay;
 import com.google.android.maps.MapActivity;
 import com.google.android.maps.MapController;
 import com.google.android.maps.MapView;
-import com.google.android.maps.OverlayItem;
+import com.google.android.maps.Overlay;
 
 public class ShowMap extends MapActivity {
 	
@@ -42,6 +43,7 @@ public class ShowMap extends MapActivity {
 	private int LatInt1, LongInt1;
 	
 	// For getting and processing places
+	public static String KEY_INDEX = "index"; // ID of the place
 	public static String KEY_REFERENCE = "reference"; // ID of the place
 	public static String KEY_NAME = "name"; // name of the place
 	public static String KEY_ADDRESS = "vicinity"; // Place area name
@@ -53,9 +55,6 @@ public class ShowMap extends MapActivity {
 	private MapView MapView1;
 	private MapController MapController1;
 	private GeoPoint GeoPoint1;
-	
-	// For adding markers for the places found
-	PlacesToPlot PlacesToPlot1;
 
 	@Override
 	protected boolean isRouteDisplayed() {
@@ -87,7 +86,7 @@ public class ShowMap extends MapActivity {
 		GetLocationAlt ();
 		GetPlaces ();
 		DrawMap ();
-		//DrawMarkersPlaces ();
+		DrawMarkersPlaces ();
 	}
 	
 	private void ProcedureCurrentLocation () {
@@ -96,7 +95,7 @@ public class ShowMap extends MapActivity {
 		GetLocationCurrent ();
 		GetPlaces ();
 		DrawMap ();
-		//DrawMarkersPlaces ();
+		DrawMarkersPlaces ();
 	}
 	
 	private void GetLocationAlt () {
@@ -116,7 +115,6 @@ public class ShowMap extends MapActivity {
 
 	// Borrowed from 
 	// http://p-xr.com/android-tutorial-how-to-parse-read-json-data-into-a-android-listview/
-	// and
 	// http://www.androidhive.info/2012/01/android-json-parsing-tutorial/
 	private void GetPlaces () {
 		// URL PARAMETERS
@@ -134,9 +132,7 @@ public class ShowMap extends MapActivity {
 		
 		InputStream InputStream1 = null;
 		String json_str = "";
-		JSONObject ArrayJSON = null;
-		
-		
+		JSONObject JSONObject1 = null;
 		
 		// GetPlaces Step 1: Get input data stream from the URL.
 		// Input: URL
@@ -149,7 +145,7 @@ public class ShowMap extends MapActivity {
 			InputStream1 = Entity1.getContent(); 
 		}
 		catch(Exception e){
-			Log.e("log_tag", "Error in http connection "+e.toString());
+			Log.e("GetPlaces 1", "Error in http connection "+e.toString());
 		}
 		
 		// GetPlaces Step 2: Convert the downloaded input stream into a string. 
@@ -167,49 +163,48 @@ public class ShowMap extends MapActivity {
 		}
 		
 		catch(Exception e){
-			Log.e("log_tag", "Error converting result "+e.toString());
+			Log.e("GetPlaces 2", "Error converting result "+e.toString());
 		}
 		
-		Log.i ("CHECK", json_str);
+		Log.i ("CHECK 1", json_str);
 		
 		// GetPlaces Step 3: Parse the data stream into a JSON object.  
 		// Input: json_str
-		// Output: ArrayJSON
+		// Output: JSONObject1
+		
 		try {
-			ArrayJSON = new JSONObject(json_str);
+			JSONObject1 = new JSONObject(json_str);
 		}
 		catch (JSONException e) {
-			Log.e("log_tag", "Error parsing data "+e.toString());
+			Log.e("GetPlaces 3", "Error parsing data "+e.toString());
 		}
 		
 		
 		// GetPlaces Step 4: Collect the desired data from the JSON object and
-		// place the information in arrays.
-		// Based on http://www.androidcompetencycenter.com/2009/10/json-parsing-in-android/
-		// Input: ArrayJSON
-		// Output: 
+		// place the information in an array.
+		// Borrowed from
+		// http://www.androidhive.info/2012/01/android-json-parsing-tutorial/
+		// Input: JSONObject1
+		// Output: ResultList
 			 
 		try {
-			JSONObject ObjectStatus = ArrayJSON.getJSONObject("status");
-			String FieldStatus = ObjectStatus.getString("status");
-			
-			JSONObject ObjectResult = ArrayJSON.getJSONObject("results");
-			
+			JSONArray JSONresults = null;
+			JSONresults = JSONObject1.getJSONArray("results"); 
 			ResultList.clear();
-			for (int i = 0; i < ObjectResult.length (); i++) {
+			
+			for (int i = 0; i < JSONresults.length (); i++) {	
+				JSONObject r = JSONresults.getJSONObject(i);
+				String FieldIndex = String.valueOf(i);
+				String FieldName = r.getString(KEY_NAME);
+				String FieldAddress = r.getString(KEY_ADDRESS);
+				
+				JSONObject JSONgeometry = r.getJSONObject("geometry");
+				JSONObject JSONlocation = JSONgeometry.getJSONObject("location");
+				String FieldLat = JSONlocation.getString(KEY_LAT);
+				String FieldLng = JSONlocation.getString(KEY_LNG);
+				
 				HashMap<String, String> HashMap1 = new HashMap<String, String>();
-				
-				String FieldName = ObjectResult.getString(KEY_NAME);
-				String FieldAddress = ObjectResult.getString(KEY_ADDRESS);
-				String FieldReference = ObjectResult.getString(KEY_REFERENCE);
-				JSONObject ObjectGeometry = ObjectResult.getJSONObject("geometry");
-				JSONObject ObjectLocation = ObjectGeometry.getJSONObject("location");
-				JSONObject ObjectLat = ObjectLocation.getJSONObject(KEY_LAT);
-				JSONObject ObjectLng = ObjectLocation.getJSONObject(KEY_LNG);
-				String FieldLat = ObjectLat.getString(KEY_LAT);
-				String FieldLng = ObjectLng.getString(KEY_LNG);
-				
-				HashMap1.put (KEY_REFERENCE, FieldReference);
+				HashMap1.put ("index", FieldIndex);
 				HashMap1.put (KEY_NAME, FieldName);
 				HashMap1.put (KEY_ADDRESS, FieldAddress);
 				HashMap1.put (KEY_LAT, FieldLat);
@@ -220,12 +215,9 @@ public class ShowMap extends MapActivity {
 			
 		}
 		catch (Exception e) {
-			Log.e ("log_tag", "No results found");
+			Log.e ("GetPlaces 4", "Failed to process JSONObject1");
 		}
 	}
-	
-	
-	
 		
 	private void DrawMap () {
 		MapView1 = (MapView)findViewById(R.id.mapview1);
@@ -236,54 +228,12 @@ public class ShowMap extends MapActivity {
         MapController1.setZoom(15); // Set zoom level
 	}
 		
-	class PlacesToPlot extends ItemizedOverlay {
-		
-		private ArrayList<OverlayItem> PlacesToPlot =
-				new ArrayList<OverlayItem> ();
-		
-
-		public PlacesToPlot(Drawable marker_local) {
-			super(marker_local);
-			// TODO Auto-generated constructor stub
-			for (int i=1; i < ResultList.size(); i++) {
-				HashMap<String, String> HashMap1 = new HashMap<String, String>();
-				HashMap1 = ResultList.get(i);
-				String PlaceName = HashMap1.get(KEY_NAME);
-				String PlaceAddress = HashMap1.get(KEY_ADDRESS);
-				
-				String PlaceLatStr = HashMap1.get(KEY_LAT);
-				String PlaceLongStr = HashMap1.get(KEY_LNG);
-				double PlaceLatDouble = Double.valueOf(PlaceLatStr);
-				double PlaceLongDouble = Double.valueOf(PlaceLongStr);
-				int PlaceLatInt = (int)(PlaceLatDouble*1000000);
-				int PlaceLongInt = (int)(PlaceLongDouble*1000000);
-				GeoPoint PlaceGeoPoint = new GeoPoint (PlaceLatInt, PlaceLongInt);
-				
-				PlacesToPlot.add(new OverlayItem (PlaceGeoPoint, PlaceName, PlaceAddress));
-				populate ();
-
-			}
-			
-		}
-
-		@Override
-		protected OverlayItem createItem(int arg0) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public int size() {
-			// TODO Auto-generated method stub
-			return 0;
-		}
-		
-	}
+	
 	
 	private void DrawMarkersPlaces () { 
-		Drawable marker1 = getResources().getDrawable(R.drawable.marker);
-		PlacesToPlot1 = new PlacesToPlot (marker1);
-		MapView1.getOverlays().add(PlacesToPlot1);
+		List<Overlay> mapOverlays = MapView1.getOverlays();
+		Drawable Drawable1 = this.getResources().getDrawable(R.drawable.marker);
+		//HelloItemizedOverlay itemizedoverlay = new HelloItemizedOverlay(drawable, this);
 		//PlacesToPlot.clear();
 		//for (int i=1; i < ResultList.size(); i++) {
 			//HashMap<String, String> HashMap1 = new HashMap<String, String>();
