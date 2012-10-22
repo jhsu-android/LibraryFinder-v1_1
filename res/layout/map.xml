@@ -8,6 +8,6 @@
 	    android:layout_width="fill_parent"
 	    android:layout_height="wrap_content"
 	    android:clickable="true"
-	    android:apiKey="0u0qdTa16jZ3pIvkIx9B4-KD1mBGJfZvv6mYZOQ"
+	    android:apiKey="0u0qdTa16jZ2ST9cMEEFLrQZvSZU5MBxuD74G8g"
 	    />
 </LinearLayout>
