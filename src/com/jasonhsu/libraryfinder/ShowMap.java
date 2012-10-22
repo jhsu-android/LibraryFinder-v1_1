@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -17,7 +18,11 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.drawable.Drawable;
+import android.location.Address;
+import android.location.Criteria;
+import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -30,21 +35,26 @@ import com.google.android.maps.ItemizedOverlay;
 import com.google.android.maps.MapActivity;
 import com.google.android.maps.MapController;
 import com.google.android.maps.MapView;
-import com.google.android.maps.Overlay;
+import com.google.android.maps.MyLocationOverlay;
 import com.google.android.maps.OverlayItem;
 
-public class ShowMap extends MapActivity {
+public class ShowMap extends MapActivity implements LocationListener {
 	
 	Boolean LocalSelectedLocationCurrent;
+	double radius;
 	
 	// For getting location
-	private LocationManager LocationManager1;
-	private Location Location1;
-	private LocationListener LocationListener1;
 	private double LatDouble1, LongDouble1;
 	private int LatInt1, LongInt1;
 	
-	// For getting and processing places
+	// For getting current location
+	private LocationManager LocationManager1;
+	private String provider;
+
+	
+	// For getting location (alternate only)
+	String LocationString;
+	
 	public static String KEY_INDEX = "index"; // ID of the place
 	public static String KEY_REFERENCE = "reference"; // ID of the place
 	public static String KEY_NAME = "name"; // name of the place
@@ -57,6 +67,9 @@ public class ShowMap extends MapActivity {
 	private MapView MapView1;
 	private MapController MapController1;
 	private GeoPoint GeoPoint1;
+	
+	// For drawing the icon at the current location
+	MyLocationOverlay MyLocationOverlay1 = null;
 
 	@Override
 	protected boolean isRouteDisplayed() {
@@ -66,10 +79,18 @@ public class ShowMap extends MapActivity {
 	
 	@Override
     public void onCreate(Bundle savedInstanceState) {
-		
 		// Start map
         super.onCreate(savedInstanceState);
         setContentView(R.layout.map);
+        
+        Intent Intent1 = getIntent();
+        String radius_str = Intent1.getStringExtra("save_radius");
+        Log.i ("ShowMap OnCreate", radius_str);
+        double radius_miles = Double.parseDouble(radius_str);
+    	double radius_meters = radius_miles * 1609.34; 
+    	radius = radius_meters * 1.73; // Fudge factor due to rectangular screen
+    	Log.i ("ShowMap OnCreate", String.valueOf(radius));
+
         
         LocalSelectedLocationCurrent = GlobalVariables.SelectedLocationCurrent;
 
@@ -83,8 +104,6 @@ public class ShowMap extends MapActivity {
 	}
 	
 	private void ProcedureAltLocation() {
-		Toast.makeText(getApplicationContext(), 
-                "LOCATION: alternate", Toast.LENGTH_LONG).show();
 		GetLocationAlt ();
 		GetPlaces ();
 		DrawMap ();
@@ -92,45 +111,79 @@ public class ShowMap extends MapActivity {
 	}
 	
 	private void ProcedureCurrentLocation () {
-		Toast.makeText(getApplicationContext(), 
-                "LOCATION: current", Toast.LENGTH_LONG).show();
 		GetLocationCurrent ();
 		GetPlaces ();
 		DrawMap ();
 		DrawMarkersPlaces ();
+		DrawMarkerHere ();
 	}
 	
 	private void GetLocationAlt () {
-		
+		LocationString = GlobalVariables.LocationAlt;
+		Geocoder Geocoder1 = new Geocoder(this, Locale.getDefault());
+        try {
+            List<Address> addresses =
+            		Geocoder1.getFromLocationName(LocationString, 5);
+            LatDouble1 = addresses.get(0).getLatitude();
+            LongDouble1 = addresses.get(0).getLongitude();
+        	LatInt1 = (int)(LatDouble1*1000000);
+        	LongInt1 = (int)(LongDouble1*1000000); 
+        } 
+        catch (Exception e) {
+        	Toast.makeText(getApplicationContext(), 
+        			"The location you entered could not be found.  " +
+        			"Your current location is being shown instead."
+        			, Toast.LENGTH_LONG).show();
+        	// Run the Intro.java script
+        	ProcedureCurrentLocation ();
+        }
 	}
 	
 	private void GetLocationCurrent () {
+		GetLocationGPS ();
+	}
+	
+	// Based on
+	// http://www.vogella.com/articles/AndroidLocationAPI/article.html#tutlocationapi
+	private void GetLocationGPS () {
+		// Get the location manager
+	    LocationManager1 = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+	    Criteria Criteria1 = new Criteria();
+	    provider = LocationManager1.getBestProvider(Criteria1, false);
+	    Location Location1 = LocationManager1.getLastKnownLocation(provider);
 		LocationManager1 = (LocationManager)getSystemService(
 				Context.LOCATION_SERVICE);
-		Location Location1 = LocationManager1.getLastKnownLocation
-				(LocationManager1.GPS_PROVIDER);
 		LatDouble1 = Location1.getLatitude();
 		LongDouble1 = Location1.getLongitude();
 		LatInt1 = (int)(LatDouble1*1000000);
-		LongInt1 = (int)(LongDouble1*1000000);		
+		LongInt1 = (int)(LongDouble1*1000000); 
 	}
 
 	// Borrowed from 
 	// http://p-xr.com/android-tutorial-how-to-parse-read-json-data-into-a-android-listview/
 	// http://www.androidhive.info/2012/01/android-json-parsing-tutorial/
 	private void GetPlaces () {
+		// Get search radius
+        //radius_str = GlobalVariables.radius_entered;
+        //Log.i ("GetPlaces", radius_str);
+
+		
 		// URL PARAMETERS
 		// API Key below
 		String API_KEY = "AIzaSyCRLa4LQZWNQBcjCYcIVYA45i9i8zfClqc";
 		String types = "library";
-		double radius=32186.8;
-		//double radius=1000;
 		String URL1 = "https://maps.googleapis.com/maps/api/place/search/json?";
 		URL1 = URL1 + "key=" + API_KEY;
 		URL1 = URL1 + "&location=" + LatDouble1 + "," + LongDouble1;
-		URL1 = URL1 + "&radius=" + radius;
+		URL1 = URL1 + "&radius=" + String.valueOf(radius);
 		URL1 = URL1 + "&sensor=false";
 		URL1 = URL1 + "&types=" + types;
+		
+		// URL for location 55402 and radius of 5 miles
+		// https://maps.googleapis.com/maps/api/place/search/json?key=AIzaSyCRLa4LQZWNQBcjCYcIVYA45i9i8zfClqc&location=44.975922,-93.272186&radius=12926.5&sensor=false&types=library
+		
+		Log.i ("GetPlaces - URL", URL1);
+		Log.i ("GetPlaces - URL", String.valueOf(radius));
 		
 		InputStream InputStream1 = null;
 		String json_str = "";
@@ -246,15 +299,25 @@ public class ShowMap extends MapActivity {
 				);
 		PlacesFound PlacesFound1 = new PlacesFound (MarkerPlaces);
 		MapView1.getOverlays().add(PlacesFound1);
+		
+		GeoPoint CenterPoint1 = PlacesFound1.getCenterPoint();
+		int LatSpan1 = PlacesFound1.getLatSpanE6();
+		int LngSpan1 = PlacesFound1.getLonSpanE6();
+		
+		MapController1.setCenter (CenterPoint1);
+		MapController1.zoomToSpan((int)(LatSpan1 * 1.5), (int) (LngSpan1 * 1.5));
 	}
 	
+	private void DrawMarkerHere () {
+		// MapView1.getOverlays().add(MyLocationOverlay1);
+	}
 	
 	// Based on the example on pages 608-610 in the book _Pro Android 4_
 	class PlacesFound extends ItemizedOverlay {
 		
-		
 		private ArrayList<OverlayItem> places =
 				new ArrayList<OverlayItem>();
+		private GeoPoint center = null;
 
 		public PlacesFound (Drawable marker_local) {
 			super(marker_local);
@@ -274,7 +337,7 @@ public class ShowMap extends MapActivity {
 	    			int LatInt = (int)(LatDouble*1000000);
 	    			int LngInt = (int)(LngDouble*1000000);
 	    			GeoPoint GeoPointPlace = new GeoPoint (LatInt, LngInt);
-	    			places.add(new OverlayItem (GeoPointPlace, Name, Name));
+	    			places.add(new OverlayItem (GeoPointPlace, Name, Address));
 	    			populate();
 	    			//Log.i ("DrawMap", Element1);
 	    		}
@@ -283,6 +346,51 @@ public class ShowMap extends MapActivity {
 	        	Log.e ("MarkersPlaces", "ERROR: Could not extract places data");
 	        }
 			
+		}
+		
+		public GeoPoint getCenterPoint () {
+			if (center == null) {
+				int northEdge = -90000000;
+				int southEdge = 90000000;
+				int eastEdge = -180000000;
+				int westEdge = 180000000;
+		        try {
+		        	HashMap<String, String> HashMap1 = new HashMap<String, String>();
+		    		int list_length = ResultList.size();
+		    		for (int i = 0; i < list_length; i++) {
+		    			HashMap1 = ResultList.get(i);
+		    			String LatStr = HashMap1.get(KEY_LAT);
+		    			String LngStr = HashMap1.get(KEY_LNG);
+		    			double LatDouble = Double.valueOf(LatStr);
+		    			double LngDouble = Double.valueOf(LngStr);
+		    			int LatInt = (int)(LatDouble*1000000);
+		    			int LngInt = (int)(LngDouble*1000000);
+		    			if (LatInt > northEdge)
+		    				northEdge = LatInt;
+		    			if (LatInt < southEdge)
+		    				southEdge = LatInt;
+		    			if (LngInt > eastEdge)
+		    				eastEdge = LngInt;
+		    			if (LngInt < westEdge)
+		    				westEdge = LngInt;
+		    			Log.i ("PlacesFound", LatStr);
+		    			Log.i ("PlacesFound", LngStr);
+		    		}
+		    		int LatCenter = (int)((northEdge + southEdge)/2);
+		    		int LngCenter = (int)((westEdge + eastEdge)/2);
+		    		center = new GeoPoint (LatCenter, LngCenter);
+		    		Log.i ("PlacesFound", String.valueOf(northEdge));
+		    		Log.i ("PlacesFound", String.valueOf(southEdge));
+		    		Log.i ("PlacesFound", String.valueOf(eastEdge));
+		    		Log.i ("PlacesFound", String.valueOf(westEdge));
+		        }
+		        catch (Exception e) {
+		        	Log.e ("MarkersPlaces", "ERROR: Could not extract places data");
+		        }
+				center = new GeoPoint ((int)((northEdge + southEdge)/2),
+						(int)((westEdge + eastEdge)/2));
+			}
+			return center;
 		}
 
 		@Override
@@ -296,6 +404,31 @@ public class ShowMap extends MapActivity {
 			// TODO Auto-generated method stub
 			return places.size();
 		}
+		
+	}
+
+
+	@Override
+	public void onLocationChanged(Location location) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onProviderDisabled(String provider) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onProviderEnabled(String provider) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onStatusChanged(String provider, int status, Bundle extras) {
+		// TODO Auto-generated method stub
 		
 	}
 	
